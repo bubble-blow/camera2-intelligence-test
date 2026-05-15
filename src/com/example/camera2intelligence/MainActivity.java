@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.text.TextUtils;
+import android.view.Display;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -47,6 +48,7 @@ public class MainActivity extends Activity {
     private Handler cameraHandler;
     private Rect activeArrayRect;
     private int sensorOrientation;
+    private int lensFacing = CameraCharacteristics.LENS_FACING_BACK;
 
     private final TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
@@ -177,6 +179,8 @@ public class MainActivity extends Activity {
             activeArrayRect = cc.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
             Integer orient = cc.get(CameraCharacteristics.SENSOR_ORIENTATION);
             sensorOrientation = orient == null ? 0 : orient.intValue();
+            Integer facing = cc.get(CameraCharacteristics.LENS_FACING);
+            lensFacing = facing == null ? CameraCharacteristics.LENS_FACING_BACK : facing.intValue();
 
             if (enableRaw) {
                 int[] rawCaps = cc.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
@@ -257,19 +261,41 @@ public class MainActivity extends Activity {
         final String finalText = text;
         final Face[] finalFaces = faces;
         final Rect finalActiveRect = activeArrayRect;
-        final int finalOrientation = sensorOrientation;
+        final int finalRotation = getRelativeRotationDegrees();
+        final boolean finalMirrorX = lensFacing == CameraCharacteristics.LENS_FACING_FRONT;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 facesText.setText(finalText);
-                faceOverlayView.setFaces(finalFaces, finalActiveRect, finalOrientation);
+                faceOverlayView.setFaces(finalFaces, finalActiveRect, finalRotation, finalMirrorX);
             }
         });
     }
 
+
+    private int getRelativeRotationDegrees() {
+        Display display = getWindowManager().getDefaultDisplay();
+        int rotation = display.getRotation();
+        int deviceRotationDegrees;
+        if (rotation == Surface.ROTATION_90) {
+            deviceRotationDegrees = 90;
+        } else if (rotation == Surface.ROTATION_180) {
+            deviceRotationDegrees = 180;
+        } else if (rotation == Surface.ROTATION_270) {
+            deviceRotationDegrees = 270;
+        } else {
+            deviceRotationDegrees = 0;
+        }
+
+        if (lensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+            return (sensorOrientation + deviceRotationDegrees) % 360;
+        }
+        return (sensorOrientation - deviceRotationDegrees + 360) % 360;
+    }
+
     private void closeCamera() {
         if (faceOverlayView != null) {
-            faceOverlayView.setFaces(null, null, sensorOrientation);
+            faceOverlayView.setFaces(null, null, 0, false);
         }
         if (captureSession != null) {
             captureSession.close();

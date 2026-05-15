@@ -16,7 +16,8 @@ public class FaceOverlayView extends View {
     private final Paint textPaint = new Paint();
     private Face[] faces = new Face[0];
     private Rect sensorRect;
-    private int sensorOrientation;
+    private int relativeRotation;
+    private boolean mirrorX;
 
     public FaceOverlayView(Context context) {
         super(context);
@@ -44,14 +45,15 @@ public class FaceOverlayView extends View {
         textPaint.setAntiAlias(true);
     }
 
-    public void setFaces(Face[] newFaces, Rect activeArrayRect, int orientation) {
+    public void setFaces(Face[] newFaces, Rect activeArrayRect, int rotationDegrees, boolean needMirrorX) {
         if (newFaces == null) {
             faces = new Face[0];
         } else {
             faces = newFaces;
         }
         sensorRect = activeArrayRect;
-        sensorOrientation = orientation;
+        relativeRotation = rotationDegrees;
+        mirrorX = needMirrorX;
         postInvalidate();
     }
 
@@ -87,7 +89,7 @@ public class FaceOverlayView extends View {
         float outRight;
         float outBottom;
 
-        int rotation = ((sensorOrientation % 360) + 360) % 360;
+        int rotation = ((relativeRotation % 360) + 360) % 360;
         if (rotation == 90) {
             outLeft = top / h * getWidth();
             outTop = (w - right) / w * getHeight();
@@ -110,8 +112,16 @@ public class FaceOverlayView extends View {
             outBottom = bottom / h * getHeight();
         }
 
-        return new RectF(Math.min(outLeft, outRight), Math.min(outTop, outBottom),
+        RectF rect = new RectF(Math.min(outLeft, outRight), Math.min(outTop, outBottom),
                 Math.max(outLeft, outRight), Math.max(outTop, outBottom));
+
+        if (mirrorX) {
+            float newLeft = getWidth() - rect.right;
+            float newRight = getWidth() - rect.left;
+            rect.left = newLeft;
+            rect.right = newRight;
+        }
+        return rect;
     }
 }
 
