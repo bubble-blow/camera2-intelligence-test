@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Camera2 Intelligence Test</string>
+    <string name="camera_id_hint">输入 Camera ID（不校验）</string>
+    <string name="enable_raw">创建会话时启用 RAW 流</string>
+    <string name="start_preview">开始预览</string>
+    <string name="faces_label">人脸结果：</string>
+</resources>
