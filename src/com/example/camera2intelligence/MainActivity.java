@@ -46,6 +46,7 @@ public class MainActivity extends Activity {
     private HandlerThread cameraThread;
     private Handler cameraHandler;
     private Rect activeArrayRect;
+    private int sensorOrientation;
 
     private final TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
@@ -174,6 +175,8 @@ public class MainActivity extends Activity {
             CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
             CameraCharacteristics cc = manager.getCameraCharacteristics(cameraDevice.getId());
             activeArrayRect = cc.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+            Integer orient = cc.get(CameraCharacteristics.SENSOR_ORIENTATION);
+            sensorOrientation = orient == null ? 0 : orient.intValue();
 
             if (enableRaw) {
                 int[] rawCaps = cc.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
@@ -254,18 +257,19 @@ public class MainActivity extends Activity {
         final String finalText = text;
         final Face[] finalFaces = faces;
         final Rect finalActiveRect = activeArrayRect;
+        final int finalOrientation = sensorOrientation;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 facesText.setText(finalText);
-                faceOverlayView.setFaces(finalFaces, finalActiveRect);
+                faceOverlayView.setFaces(finalFaces, finalActiveRect, finalOrientation);
             }
         });
     }
 
     private void closeCamera() {
         if (faceOverlayView != null) {
-            faceOverlayView.setFaces(null, null);
+            faceOverlayView.setFaces(null, null, sensorOrientation);
         }
         if (captureSession != null) {
             captureSession.close();

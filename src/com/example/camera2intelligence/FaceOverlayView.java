@@ -16,6 +16,7 @@ public class FaceOverlayView extends View {
     private final Paint textPaint = new Paint();
     private Face[] faces = new Face[0];
     private Rect sensorRect;
+    private int sensorOrientation;
 
     public FaceOverlayView(Context context) {
         super(context);
@@ -43,13 +44,14 @@ public class FaceOverlayView extends View {
         textPaint.setAntiAlias(true);
     }
 
-    public void setFaces(Face[] newFaces, Rect activeArrayRect) {
+    public void setFaces(Face[] newFaces, Rect activeArrayRect, int orientation) {
         if (newFaces == null) {
             faces = new Face[0];
         } else {
             faces = newFaces;
         }
         sensorRect = activeArrayRect;
+        sensorOrientation = orientation;
         postInvalidate();
     }
 
@@ -60,16 +62,9 @@ public class FaceOverlayView extends View {
             return;
         }
 
-        float scaleX = (float) getWidth() / (float) sensorRect.width();
-        float scaleY = (float) getHeight() / (float) sensorRect.height();
-
         for (int i = 0; i < faces.length; i++) {
             Rect r = faces[i].getBounds();
-            RectF mapped = new RectF(
-                    (r.left - sensorRect.left) * scaleX,
-                    (r.top - sensorRect.top) * scaleY,
-                    (r.right - sensorRect.left) * scaleX,
-                    (r.bottom - sensorRect.top) * scaleY);
+            RectF mapped = mapRectForDisplay(r);
             canvas.drawRect(mapped, boxPaint);
             canvas.drawText("#" + i + " s=" + faces[i].getScore(),
                     mapped.left,
@@ -77,4 +72,46 @@ public class FaceOverlayView extends View {
                     textPaint);
         }
     }
+
+    private RectF mapRectForDisplay(Rect faceRect) {
+        float left = faceRect.left - sensorRect.left;
+        float top = faceRect.top - sensorRect.top;
+        float right = faceRect.right - sensorRect.left;
+        float bottom = faceRect.bottom - sensorRect.top;
+
+        float w = sensorRect.width();
+        float h = sensorRect.height();
+
+        float outLeft;
+        float outTop;
+        float outRight;
+        float outBottom;
+
+        int rotation = ((sensorOrientation % 360) + 360) % 360;
+        if (rotation == 90) {
+            outLeft = top / h * getWidth();
+            outTop = (w - right) / w * getHeight();
+            outRight = bottom / h * getWidth();
+            outBottom = (w - left) / w * getHeight();
+        } else if (rotation == 180) {
+            outLeft = (w - right) / w * getWidth();
+            outTop = (h - bottom) / h * getHeight();
+            outRight = (w - left) / w * getWidth();
+            outBottom = (h - top) / h * getHeight();
+        } else if (rotation == 270) {
+            outLeft = (h - bottom) / h * getWidth();
+            outTop = left / w * getHeight();
+            outRight = (h - top) / h * getWidth();
+            outBottom = right / w * getHeight();
+        } else {
+            outLeft = left / w * getWidth();
+            outTop = top / h * getHeight();
+            outRight = right / w * getWidth();
+            outBottom = bottom / h * getHeight();
+        }
+
+        return new RectF(Math.min(outLeft, outRight), Math.min(outTop, outBottom),
+                Math.max(outLeft, outRight), Math.max(outTop, outBottom));
+    }
 }
+
