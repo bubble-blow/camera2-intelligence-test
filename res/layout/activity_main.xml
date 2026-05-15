@@ -23,11 +23,22 @@
         android:layout_height="wrap_content"
         android:text="@string/start_preview" />
 
-    <TextureView
-        android:id="@+id/texture_preview"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1" >
+
+        <TextureView
+            android:id="@+id/texture_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.example.camera2intelligence.FaceOverlayView
+            android:id="@+id/face_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
 
     <TextView
         android:id="@+id/text_faces"

@@ -10,6 +10,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.graphics.Rect;
 import android.hardware.camera2.params.Face;
 import android.media.ImageReader;
 import android.os.Bundle;
@@ -33,6 +34,7 @@ public class MainActivity extends Activity {
     private TextView facesText;
     private EditText cameraIdInput;
     private Switch rawSwitch;
+    private FaceOverlayView faceOverlayView;
 
     private CameraDevice cameraDevice;
     private CameraCaptureSession captureSession;
@@ -43,6 +45,7 @@ public class MainActivity extends Activity {
 
     private HandlerThread cameraThread;
     private Handler cameraHandler;
+    private Rect activeArrayRect;
 
     private final TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
@@ -72,6 +75,7 @@ public class MainActivity extends Activity {
         facesText = (TextView) findViewById(R.id.text_faces);
         cameraIdInput = (EditText) findViewById(R.id.edit_camera_id);
         rawSwitch = (Switch) findViewById(R.id.switch_raw);
+        faceOverlayView = (FaceOverlayView) findViewById(R.id.face_overlay);
         Button startButton = (Button) findViewById(R.id.button_start);
 
         previewView.setSurfaceTextureListener(surfaceTextureListener);
@@ -167,9 +171,11 @@ public class MainActivity extends Activity {
             outputs.add(previewSurface);
             outputs.add(jpegReader.getSurface());
 
+            CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
+            CameraCharacteristics cc = manager.getCameraCharacteristics(cameraDevice.getId());
+            activeArrayRect = cc.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
             if (enableRaw) {
-                CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
-                CameraCharacteristics cc = manager.getCameraCharacteristics(cameraDevice.getId());
                 int[] rawCaps = cc.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
                 boolean supportsRaw = false;
                 if (rawCaps != null) {
@@ -246,15 +252,21 @@ public class MainActivity extends Activity {
             text = sb.toString();
         }
         final String finalText = text;
+        final Face[] finalFaces = faces;
+        final Rect finalActiveRect = activeArrayRect;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 facesText.setText(finalText);
+                faceOverlayView.setFaces(finalFaces, finalActiveRect);
             }
         });
     }
 
     private void closeCamera() {
+        if (faceOverlayView != null) {
+            faceOverlayView.setFaces(null, null);
+        }
         if (captureSession != null) {
             captureSession.close();
             captureSession = null;
